@@ -12,7 +12,12 @@ export default function TvPage() {
     return p ? p.name.toUpperCase() : "";
   };
 
-  const liveMatch = state.matches.find(m => m.id === state.currentLiveMatchId);
+  // Primary: use currentLiveMatchId. Fallback: first 'live' status match. Fallback2: first non-finished match
+  const liveMatch =
+    state.matches.find(m => m.id === state.currentLiveMatchId && m.status !== 'finished') ||
+    state.matches.find(m => m.status === 'live') ||
+    state.matches.find(m => m.status !== 'finished') ||
+    null;
 
   // Auto-switch mode based on tournament state
   useEffect(() => {

@@ -1,24 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTournament } from '../store/TournamentContext';
 import { advanceWinner } from '../lib/tournament-utils';
+import { Tv } from 'lucide-react';
 import { Undo2, RotateCcw, Save } from 'lucide-react';
 
 export default function RemotePage() {
-  const { state, setTournamentState, updateMatch } = useTournament();
+  const { state, setTournamentState, updateMatch, setLiveMatch } = useTournament();
   const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   const activeMatches = state.matches.filter(m => m.status !== 'finished');
 
-  const handleSelectMatch = (e) => {
-    const matchId = e.target.value;
+  const handleSelectMatch = (matchId) => {
     setSelectedMatchId(matchId);
-    
-    // Set status to live if scheduled
+    // Set this match as the live TV match
+    setLiveMatch(matchId);
+    // Mark as live if scheduled
     const match = state.matches.find(m => m.id === matchId);
     if (match && match.status === 'scheduled') {
       updateMatch({ id: matchId, status: 'live' });
     }
   };
+
+  // Auto-select the current live match when component loads
+  useEffect(() => {
+    if (state.currentLiveMatchId && !selectedMatchId) {
+      setSelectedMatchId(state.currentLiveMatchId);
+    }
+  }, [state.currentLiveMatchId]);
 
   const getPlayerName = (id) => {
     if (!id) return "TBD";
@@ -127,7 +135,7 @@ export default function RemotePage() {
           <select 
             className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-4 py-4 text-lg font-bold focus:border-emerald-500 focus:outline-none appearance-none"
             value={selectedMatchId || ''}
-            onChange={handleSelectMatch}
+            onChange={e => handleSelectMatch(e.target.value)}
           >
             <option value="" disabled>-- Select a match --</option>
             {activeMatches.map(m => (
