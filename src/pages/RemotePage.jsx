@@ -38,20 +38,20 @@ export default function RemotePage() {
 
   const addFrame = (playerNum) => {
     if (!currentMatch) return;
-    
+
     const isPlayer1 = playerNum === 1;
     let newScore1 = currentMatch.score1;
     let newScore2 = currentMatch.score2;
-    
+
     if (isPlayer1) newScore1++; else newScore2++;
-    
+
     const newFrames = [...currentMatch.frames, {
       frameNumber: currentMatch.frames.length + 1,
       winnerId: isPlayer1 ? currentMatch.player1Id : currentMatch.player2Id,
       timestamp: Date.now()
     }];
 
-    const update = {
+    const updatedMatch = {
       ...currentMatch,
       score1: newScore1,
       score2: newScore2,
@@ -60,21 +60,43 @@ export default function RemotePage() {
 
     // Check win condition
     if (newScore1 >= state.framesToWin || newScore2 >= state.framesToWin) {
-      update.status = 'finished';
-      update.winnerId = newScore1 >= state.framesToWin ? currentMatch.player1Id : currentMatch.player2Id;
-      
-      // We must advance the winner in the full state
-      const updatedMatchInList = state.matches.map(m => m.id === update.id ? update : m);
-      const matchesAfterAdvancement = advanceWinner(updatedMatchInList, update.id, update.winnerId);
-      
+      updatedMatch.status = 'finished';
+      updatedMatch.winnerId = newScore1 >= state.framesToWin ? currentMatch.player1Id : currentMatch.player2Id;
+
+      // Advance winner in bracket
+      const updatedMatchList = state.matches.map(m => m.id === updatedMatch.id ? updatedMatch : m);
+      const matchesAfterAdvancement = advanceWinner(updatedMatchList, updatedMatch.id, updatedMatch.winnerId);
+
+      // Find next available match to auto-switch to
+      // Priority: next scheduled/live match in same round, then any non-finished match
+      const nextMatch =
+        matchesAfterAdvancement.find(m => m.status !== 'finished' && m.player1Id && m.player2Id && m.id !== updatedMatch.id) ||
+        matchesAfterAdvancement.find(m => m.status !== 'finished' && m.id !== updatedMatch.id) ||
+        null;
+
+      const nextLiveMatchId = nextMatch ? nextMatch.id : null;
+
       setTournamentState({
         ...state,
-        matches: matchesAfterAdvancement
+        matches: matchesAfterAdvancement,
+        currentLiveMatchId: nextLiveMatchId
       });
+
+      // Auto-switch Remote to next match too
+      if (nextMatch) {
+        setSelectedMatchId(nextMatch.id);
+        if (nextMatch.status === 'scheduled') {
+          // Will be marked live via updateMatch below, but since we wrote full state above,
+          // just mark it live in that same write
+        }
+      } else {
+        setSelectedMatchId(null);
+      }
+
       return;
     }
 
-    updateMatch(update);
+    updateMatch(updatedMatch);
   };
 
   const removeFrame = (playerNum) => {
