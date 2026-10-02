@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { ref, onValue, set, update } from "firebase/database";
+import { db } from '../lib/firebase';
 
 const initialState = {
   tournamentName: "",
@@ -9,95 +11,64 @@ const initialState = {
   currentLiveMatchId: null,
 };
 
-const TOURNAMENT_STORAGE_KEY = 'billiard_tournament_state';
-const BROADCAST_CHANNEL_NAME = 'billiard_tournament_sync';
-
 export const TournamentContext = createContext();
 
-function tournamentReducer(state, action) {
-  switch (action.type) {
-    case 'SET_STATE': {
-      const newState = { ...state, ...action.payload };
-      // Prevent infinite loop by checking if state actually changed
-      if (JSON.stringify(state) === JSON.stringify(newState)) {
-        return state;
-      }
-      return newState;
-    }
-    case 'UPDATE_MATCH':
-      return {
-        ...state,
-        matches: state.matches.map(m => m.id === action.payload.id ? { ...m, ...action.payload } : m)
-      };
-    case 'SET_LIVE_MATCH':
-      return { ...state, currentLiveMatchId: action.payload };
-    case 'RESET_TOURNAMENT':
-      return { ...initialState };
-    default:
-      return state;
-  }
-}
-
 export function TournamentProvider({ children }) {
-  const [state, dispatch] = useReducer(tournamentReducer, initialState, (initial) => {
-    try {
-      const stored = localStorage.getItem(TOURNAMENT_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : initial;
-    } catch (e) {
-      return initial;
-    }
-  });
+  const [state, setState] = useState(initialState);
+  const [loading, setLoading] = useState(true);
 
-  const broadcastChannel = React.useRef(null);
-
+  // Sync state FROM Firebase
   useEffect(() => {
-    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-    broadcastChannel.current = channel;
+    const tournamentRef = ref(db, 'tournament');
     
-    channel.onmessage = (event) => {
-      if (event.data) {
-        dispatch({ type: 'SET_STATE', payload: event.data });
+    const unsubscribe = onValue(tournamentRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Firebase arrays might be undefined if empty, ensure defaults
+        setState({
+          ...initialState,
+          ...data,
+          players: data.players || [],
+          matches: data.matches || []
+        });
       }
-    };
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase read error:", error);
+      setLoading(false);
+    });
 
-    const handleStorage = (e) => {
-      if (e.key === TOURNAMENT_STORAGE_KEY && e.newValue) {
-        try {
-          dispatch({ type: 'SET_STATE', payload: JSON.parse(e.newValue) });
-        } catch (err) {}
-      }
-    };
+    return () => unsubscribe();
+  }, []);
+
+  // Modify entire state
+  const setTournamentState = (newState) => {
+    // We update local state optimistically, but Firebase will be the source of truth
+    set(ref(db, 'tournament'), newState).catch(err => console.error("Firebase write error:", err));
+  };
+
+  // Update a specific match
+  const updateMatch = (matchUpdate) => {
+    // Optimistic update
+    const newMatches = state.matches.map(m => m.id === matchUpdate.id ? { ...m, ...matchUpdate } : m);
     
-    window.addEventListener('storage', handleStorage);
+    // Write to Firebase
+    set(ref(db, 'tournament/matches'), newMatches).catch(err => console.error("Firebase match update error:", err));
+  };
 
-    return () => {
-      channel.close();
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
+  // Set live match ID
+  const setLiveMatch = (matchId) => {
+    set(ref(db, 'tournament/currentLiveMatchId'), matchId).catch(err => console.error("Firebase live match update error:", err));
+  };
 
-  useEffect(() => {
-    localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(state));
-    if (broadcastChannel.current) {
-      try {
-        broadcastChannel.current.postMessage(state);
-      } catch (e) {
-        console.warn("BroadcastChannel postMessage failed:", e);
-      }
-    }
-  }, [state]);
-
-  const setTournamentState = useCallback((newState) => {
-    dispatch({ type: 'SET_STATE', payload: newState });
-  }, []);
-
-  const updateMatch = useCallback((matchUpdate) => {
-    dispatch({ type: 'UPDATE_MATCH', payload: matchUpdate });
-  }, []);
-
-  const setLiveMatch = useCallback((matchId) => {
-    dispatch({ type: 'SET_LIVE_MATCH', payload: matchId });
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-emerald-400">
+        <div className="text-4xl font-black mb-4 animate-pulse">CONNECTING TO FIREBASE...</div>
+        <div className="text-slate-500">Synchronizing live tournament data</div>
+      </div>
+    );
+  }
 
   return (
     <TournamentContext.Provider value={{ state, setTournamentState, updateMatch, setLiveMatch }}>
