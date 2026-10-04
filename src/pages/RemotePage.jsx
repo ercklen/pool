@@ -44,6 +44,8 @@ export default function RemotePage() {
     if (!id) return "TBD";
     const p = state.players.find(p => p.id === id);
     return p ? p.name : "Unknown";
+  };
+
   const getTableName = (id) => {
     if (!id) return "?";
     const t = (state.tables || []).find(t => t.id === id);
