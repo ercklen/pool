@@ -14,6 +14,7 @@ function App() {
           <Route path="/" element={<Navigate to="/admin" replace />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/tv" element={<TvPage />} />
+          <Route path="/tv/:tableId" element={<TvPage />} />
           <Route path="/remote" element={<RemotePage />} />
         </Routes>
       </BrowserRouter>

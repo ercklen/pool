@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTournament } from '../store/TournamentContext';
 import ResponsiveBracket from '../components/ResponsiveBracket';
 
 export default function TvPage() {
+  const { tableId } = useParams();
   const { state } = useTournament();
   const [mode, setMode] = useState('live');
 
@@ -19,21 +21,27 @@ export default function TvPage() {
   };
 
   // Primary: currentLiveMatchId (non-finished). Fallback: first live. Fallback2: first non-finished.
-  const liveMatch =
-    state.matches.find(m => m.id === state.currentLiveMatchId && m.status !== 'finished') ||
-    state.matches.find(m => m.status === 'live') ||
-    state.matches.find(m => m.status !== 'finished') ||
-    null;
+  let liveMatch = null;
+  if (tableId) {
+    liveMatch = state.matches.find(m => m.tableId === tableId && m.status === 'live') ||
+                state.matches.find(m => m.tableId === tableId && m.status !== 'finished');
+  } else {
+    liveMatch =
+      state.matches.find(m => m.id === state.currentLiveMatchId && m.status !== 'finished') ||
+      state.matches.find(m => m.status === 'live') ||
+      state.matches.find(m => m.status !== 'finished') ||
+      null;
+  }
 
   const allLiveMatches = state.matches.filter(m => m.status === 'live');
 
-  // Auto-switch to winner screen when final is done
+  // Auto-switch to winner screen when final is done (only on main TV)
   useEffect(() => {
-    if (state.matches.length > 0) {
+    if (state.matches.length > 0 && !tableId) {
       const finalMatch = state.matches[state.matches.length - 1];
       if (finalMatch.status === 'finished') setMode('winner');
     }
-  }, [state.matches]);
+  }, [state.matches, tableId]);
 
   if (!state.matches.length) {
     return (
@@ -57,9 +65,13 @@ export default function TvPage() {
           <h2 className="text-base md:text-2xl text-emerald-400 font-bold tracking-widest uppercase mt-1">DÉFI {state.format}</h2>
         </div>
         <div className="flex gap-2 md:gap-4">
-          <button onClick={() => setMode('live')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'live' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Live</button>
-          <button onClick={() => setMode('matches')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'matches' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Tables</button>
-          <button onClick={() => setMode('bracket')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'bracket' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Bracket</button>
+          {!tableId && (
+            <>
+              <button onClick={() => setMode('live')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'live' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Live</button>
+              <button onClick={() => setMode('matches')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'matches' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Tables</button>
+              <button onClick={() => setMode('bracket')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'bracket' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Bracket</button>
+            </>
+          )}
         </div>
       </header>
 
@@ -128,7 +140,9 @@ export default function TvPage() {
 
         {mode === 'live' && !liveMatch && (
           <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="text-4xl text-slate-600 font-bold">NO MATCH SELECTED</div>
+            <div className="text-4xl text-slate-600 font-bold">
+              {tableId ? 'NO MATCH ASSIGNED TO THIS TABLE' : 'NO MATCH SELECTED'}
+            </div>
           </div>
         )}
 
