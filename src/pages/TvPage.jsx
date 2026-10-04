@@ -64,7 +64,20 @@ export default function TvPage() {
           <h1 className="text-2xl md:text-5xl font-black tracking-tight">{state.tournamentName || 'BILLIARD TOURNAMENT'}</h1>
           <h2 className="text-base md:text-2xl text-emerald-400 font-bold tracking-widest uppercase mt-1">DÉFI {state.format}</h2>
         </div>
-        <div className="flex gap-2 md:gap-4">
+        <div className="flex gap-2 md:gap-4 items-center">
+          <button 
+            onClick={() => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+              } else {
+                document.exitFullscreen().catch(err => console.log(err));
+              }
+            }}
+            className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition mr-2"
+            title="Toggle Fullscreen"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          </button>
           {!tableId && (
             <>
               <button onClick={() => setMode('live')} className={`px-3 py-2 text-sm font-bold rounded-lg transition ${mode === 'live' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Live</button>

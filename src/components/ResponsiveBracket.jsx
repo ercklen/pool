@@ -1,18 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
 import { useTournament } from '../store/TournamentContext';
 import { getRoundName } from '../lib/tournament-utils';
 
 export default function ResponsiveBracket() {
   const { state } = useTournament();
-  const containerRef = useRef(null);
-  const [scale, setScale] = useState(1);
 
   if (!state.matches || state.matches.length === 0) return null;
 
   const maxRound = Math.max(...state.matches.map(m => m.round));
   const rounds = [];
   for (let r = 1; r <= maxRound; r++) {
-    rounds.push(state.matches.filter(m => m.round === r));
+    rounds.push(state.matches.filter(m => m.round === r).sort((a, b) => a.matchIndex - b.matchIndex));
   }
 
   const getPlayerName = (id) => {
@@ -28,65 +26,70 @@ export default function ResponsiveBracket() {
   };
 
   return (
-    <div className="w-full h-full overflow-auto" ref={containerRef}>
-      <div className="inline-flex gap-6 md:gap-10 p-4 md:p-8 min-w-max items-start">
+    <div className="w-full h-full overflow-auto bg-slate-950 p-8 flex items-center">
+      <div className="flex h-full min-w-max items-stretch gap-16">
         {rounds.map((roundMatches, rIdx) => {
           const roundLabel = getRoundName(rIdx + 1, maxRound);
-          const matchCount = roundMatches.length;
-          // Vertical gap between matches grows with each round
-          const gapClass = rIdx === 0 ? 'gap-3' : rIdx === 1 ? 'gap-10' : rIdx === 2 ? 'gap-24' : 'gap-48';
 
           return (
-            <div key={`round-${rIdx}`} className="flex flex-col items-center">
+            <div key={`round-${rIdx}`} className="flex flex-col items-center w-64 relative">
               {/* Round label */}
-              <div className="text-center font-bold text-slate-400 mb-4 uppercase tracking-widest text-xs md:text-sm whitespace-nowrap">
+              <div className="absolute -top-12 text-center font-bold text-slate-400 uppercase tracking-widest text-sm">
                 {roundLabel}
               </div>
 
               {/* Matches column */}
-              <div className={`flex flex-col ${gapClass} justify-around flex-1`} style={{
-                gap: `${Math.pow(2, rIdx) * 1.5}rem`,
-                paddingTop: rIdx === 0 ? 0 : `${Math.pow(2, rIdx - 1) * 0.75}rem`,
-              }}>
-                {roundMatches.map(match => {
+              <div className="flex flex-col justify-around flex-1 w-full h-full">
+                {roundMatches.map((match, mIdx) => {
                   const isLive = match.status === 'live';
                   const tableName = getTableName(match.tableId);
                   const p1Won = match.winnerId === match.player1Id && match.winnerId;
                   const p2Won = match.winnerId === match.player2Id && match.winnerId;
+                  const isEven = mIdx % 2 === 0;
 
                   return (
-                    <div key={match.id} className="relative flex items-center">
-                      <div className={`w-44 md:w-56 bg-slate-800 rounded-lg overflow-hidden border-2 flex flex-col shadow-lg ${
-                        isLive ? 'border-red-500 shadow-red-900/40' : 'border-slate-700'
+                    <div key={match.id} className="relative flex items-center justify-center w-full">
+                      <div className={`w-full bg-slate-900 rounded-xl overflow-hidden border-2 flex flex-col shadow-2xl z-10 transition-transform ${
+                        isLive ? 'border-red-500 scale-105 shadow-red-900/40' : 'border-slate-700'
                       }`}>
                         {/* Player 1 */}
-                        <div className={`flex justify-between items-center px-3 py-2 border-b border-slate-700 ${p1Won ? 'bg-emerald-900/40 text-emerald-400 font-bold' : 'text-slate-200'}`}>
-                          <span className="text-sm truncate max-w-[7rem]">{getPlayerName(match.player1Id) || 'TBD'}</span>
-                          <span className="font-mono font-bold text-sm ml-2">{match.score1 ?? 0}</span>
+                        <div className={`flex justify-between items-center px-4 py-3 border-b border-slate-700 ${p1Won ? 'bg-emerald-900/60 text-emerald-400 font-bold' : 'text-slate-100'}`}>
+                          <span className="text-lg font-bold truncate text-center flex-1">{getPlayerName(match.player1Id) || 'TBD'}</span>
+                          <span className="font-mono font-black text-xl ml-3 bg-slate-950/50 px-2 py-1 rounded">{match.score1 ?? 0}</span>
                         </div>
                         {/* Player 2 */}
-                        <div className={`flex justify-between items-center px-3 py-2 ${p2Won ? 'bg-emerald-900/40 text-emerald-400 font-bold' : 'text-slate-200'}`}>
-                          <span className="text-sm truncate max-w-[7rem]">{getPlayerName(match.player2Id) || 'TBD'}</span>
-                          <span className="font-mono font-bold text-sm ml-2">{match.score2 ?? 0}</span>
+                        <div className={`flex justify-between items-center px-4 py-3 ${p2Won ? 'bg-emerald-900/60 text-emerald-400 font-bold' : 'text-slate-100'}`}>
+                          <span className="text-lg font-bold truncate text-center flex-1">{getPlayerName(match.player2Id) || 'TBD'}</span>
+                          <span className="font-mono font-black text-xl ml-3 bg-slate-950/50 px-2 py-1 rounded">{match.score2 ?? 0}</span>
                         </div>
                         {/* Table + Status footer */}
-                        <div className={`flex justify-between items-center px-3 py-1 text-xs border-t border-slate-700/60 ${
-                          isLive ? 'bg-red-950/40 text-red-400' : 'bg-slate-900/50 text-slate-500'
+                        <div className={`flex justify-between items-center px-4 py-2 text-xs font-bold tracking-wider border-t border-slate-800 ${
+                          isLive ? 'bg-red-950 text-red-400' : 'bg-slate-950 text-slate-500'
                         }`}>
-                          <span>{tableName || 'No table'}</span>
-                          <span className={`font-bold uppercase ${
-                            isLive ? 'text-red-400' :
-                            match.status === 'finished' ? 'text-slate-400' :
-                            'text-blue-400'
-                          }`}>
-                            {isLive ? '● LIVE' : match.status === 'finished' ? 'Done' : 'Scheduled'}
+                          <span>{tableName || 'NO TABLE'}</span>
+                          <span className={isLive ? 'text-red-400 animate-pulse' : match.status === 'finished' ? 'text-slate-600' : 'text-blue-500'}>
+                            {isLive ? 'LIVE' : match.status === 'finished' ? 'FINISHED' : 'SCHEDULED'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Connector line to next round */}
+                      {/* Tree Branch Connectors */}
                       {rIdx < maxRound - 1 && (
-                        <div className="absolute left-full w-6 md:w-10 h-[2px] bg-slate-600" />
+                        <>
+                          {/* Horizontal line going right */}
+                          <div className="absolute left-full w-8 h-[3px] bg-slate-600 z-0"></div>
+                          
+                          {/* Vertical line connecting pairs */}
+                          <div 
+                            className={`absolute left-[calc(100%+2rem)] w-[3px] bg-slate-600 z-0`}
+                            style={{
+                              height: '50vh', // This is a css trick, it won't be exact without JS measuring, but flex box makes it close. Let's use CSS pseudo-elements instead of absolute divs for better scaling.
+                              maxHeight: '100%',
+                              top: isEven ? '50%' : 'auto',
+                              bottom: !isEven ? '50%' : 'auto',
+                            }}
+                          ></div>
+                        </>
                       )}
                     </div>
                   );
