@@ -16,6 +16,7 @@ function App() {
           <Route path="/tv" element={<TvPage />} />
           <Route path="/tv/:tableId" element={<TvPage />} />
           <Route path="/remote" element={<RemotePage />} />
+          <Route path="/remote/:tableId" element={<RemotePage />} />
         </Routes>
       </BrowserRouter>
     </TournamentProvider>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTournament } from '../store/TournamentContext';
 import { advanceWinner } from '../lib/tournament-utils';
-import { Tv } from 'lucide-react';
-import { Undo2, RotateCcw, Save } from 'lucide-react';
+import { Tv, Undo2, RotateCcw, Save } from 'lucide-react';
 
 export default function RemotePage() {
+  const { tableId } = useParams();
   const { state, setTournamentState, updateMatch, setLiveMatch } = useTournament();
   const [selectedMatchId, setSelectedMatchId] = useState(null);
 
@@ -21,17 +22,32 @@ export default function RemotePage() {
     }
   };
 
-  // Auto-select the current live match when component loads
+  // Auto-select match logic
   useEffect(() => {
-    if (state.currentLiveMatchId && !selectedMatchId) {
-      setSelectedMatchId(state.currentLiveMatchId);
+    if (tableId) {
+      // If table-specific remote, find the live match assigned to this table
+      const assignedMatch = state.matches.find(m => m.tableId === tableId && m.status !== 'finished');
+      if (assignedMatch && assignedMatch.id !== selectedMatchId) {
+        setSelectedMatchId(assignedMatch.id);
+      } else if (!assignedMatch && selectedMatchId) {
+        setSelectedMatchId(null); // Clear if no match is assigned anymore
+      }
+    } else {
+      // General remote: auto-select the current live TV match if not already selected
+      if (state.currentLiveMatchId && !selectedMatchId) {
+        setSelectedMatchId(state.currentLiveMatchId);
+      }
     }
-  }, [state.currentLiveMatchId]);
+  }, [state.currentLiveMatchId, state.matches, tableId, selectedMatchId]);
 
   const getPlayerName = (id) => {
     if (!id) return "TBD";
     const p = state.players.find(p => p.id === id);
     return p ? p.name : "Unknown";
+  const getTableName = (id) => {
+    if (!id) return "?";
+    const t = (state.tables || []).find(t => t.id === id);
+    return t ? t.name : "?";
   };
 
   const currentMatch = state.matches.find(m => m.id === selectedMatchId);
@@ -147,26 +163,30 @@ export default function RemotePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans overflow-hidden touch-manipulation">
       <header className="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-emerald-400">Match Remote</h1>
+        <h1 className="text-xl font-bold text-emerald-400">
+          {tableId ? `${getTableName(tableId)} Remote` : 'Master Remote'}
+        </h1>
       </header>
 
       <main className="p-4 max-w-md mx-auto flex flex-col h-[calc(100vh-4rem)]">
         
-        <div className="mb-6">
-          <label className="block text-sm text-slate-400 mb-2 uppercase font-bold">Select Match</label>
-          <select 
-            className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-4 py-4 text-lg font-bold focus:border-emerald-500 focus:outline-none appearance-none"
-            value={selectedMatchId || ''}
-            onChange={e => handleSelectMatch(e.target.value)}
-          >
-            <option value="" disabled>-- Select a match --</option>
-            {activeMatches.map(m => (
-              <option key={m.id} value={m.id}>
-                TABLE {m.table || '?'} : {getPlayerName(m.player1Id)} vs {getPlayerName(m.player2Id)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!tableId && (
+          <div className="mb-6">
+            <label className="block text-sm text-slate-400 mb-2 uppercase font-bold">Select Match</label>
+            <select 
+              className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-4 py-4 text-lg font-bold focus:border-emerald-500 focus:outline-none appearance-none"
+              value={selectedMatchId || ''}
+              onChange={e => handleSelectMatch(e.target.value)}
+            >
+              <option value="" disabled>-- Select a match --</option>
+              {activeMatches.map(m => (
+                <option key={m.id} value={m.id}>
+                  {getTableName(m.tableId)} : {getPlayerName(m.player1Id)} vs {getPlayerName(m.player2Id)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {currentMatch ? (
           <div className="flex-1 flex flex-col justify-between">
@@ -243,8 +263,8 @@ export default function RemotePage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500 font-bold text-xl text-center">
-            Select a match to start scoring
+          <div className="flex-1 flex items-center justify-center text-slate-500 font-bold text-xl text-center p-4">
+            {tableId ? 'No active match assigned to this table' : 'Select a match to start scoring'}
           </div>
         )}
       </main>
