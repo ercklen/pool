@@ -2,12 +2,18 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ref, onValue, set } from "firebase/database";
 import { db } from '../lib/firebase';
 
+const DEFAULT_TABLES = [
+  { id: 'table-1', name: 'Table 1' },
+  { id: 'table-2', name: 'Table 2' },
+];
+
 const initialState = {
   tournamentName: "",
   format: "A3",
   framesToWin: 3,
   players: [],
   matches: [],
+  tables: DEFAULT_TABLES,
   currentLiveMatchId: null,
 };
 
@@ -22,6 +28,7 @@ function toArray(val) {
 
 // Deep-clean a state object coming from Firebase
 function sanitizeFromFirebase(data) {
+  const tables = toArray(data.tables);
   return {
     ...initialState,
     ...data,
@@ -30,7 +37,9 @@ function sanitizeFromFirebase(data) {
     matches: toArray(data.matches).map(m => ({
       ...m,
       frames: toArray(m.frames),
+      tableId: m.tableId ?? null,
     })),
+    tables: tables.length > 0 ? tables : DEFAULT_TABLES,
     currentLiveMatchId: data.currentLiveMatchId ?? null,
   };
 }
@@ -108,8 +117,27 @@ export function TournamentProvider({ children }) {
     );
   }
 
+  const addTable = () => {
+    const newId = `table-${Date.now()}`;
+    const newName = `Table ${(state.tables || []).length + 1}`;
+    const newTables = [...(state.tables || []), { id: newId, name: newName }];
+    set(ref(db, 'tournament/tables'), newTables).catch(err => console.error('Firebase table add error:', err));
+  };
+
+  const removeTable = (tableId) => {
+    const newTables = (state.tables || []).filter(t => t.id !== tableId);
+    set(ref(db, 'tournament/tables'), newTables).catch(err => console.error('Firebase table remove error:', err));
+  };
+
+  const assignTable = (matchId, tableId) => {
+    const newMatches = state.matches.map(m =>
+      m.id === matchId ? { ...m, tableId: tableId ?? null } : m
+    );
+    set(ref(db, 'tournament/matches'), newMatches).catch(err => console.error('Firebase assign table error:', err));
+  };
+
   return (
-    <TournamentContext.Provider value={{ state, setTournamentState, updateMatch, setLiveMatch }}>
+    <TournamentContext.Provider value={{ state, setTournamentState, updateMatch, setLiveMatch, addTable, removeTable, assignTable }}>
       {children}
     </TournamentContext.Provider>
   );
