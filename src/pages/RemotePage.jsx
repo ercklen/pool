@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTournament } from '../store/TournamentContext';
-import { advanceWinner } from '../lib/tournament-utils';
+import { advanceWinner, unadvanceWinner } from '../lib/tournament-utils';
 import { Tv, Undo2, RotateCcw, Save } from 'lucide-react';
 
 export default function RemotePage() {
@@ -150,14 +150,26 @@ export default function RemotePage() {
   };
 
   const resetMatch = () => {
-    if (confirm("Reset this match completely?")) {
-      updateMatch({
-        id: currentMatch.id,
+    if (confirm("Reset this match completely? This will undo any winner advancement.")) {
+      let updatedMatchList = state.matches;
+      if (currentMatch.status === 'finished') {
+        updatedMatchList = unadvanceWinner(updatedMatchList, currentMatch.id);
+      }
+      
+      const updatedMatch = {
+        ...currentMatch,
         score1: 0,
         score2: 0,
         frames: [],
         status: 'live',
         winnerId: null
+      };
+      
+      updatedMatchList = updatedMatchList.map(m => m.id === currentMatch.id ? updatedMatch : m);
+      
+      setTournamentState({
+        ...state,
+        matches: updatedMatchList
       });
     }
   };

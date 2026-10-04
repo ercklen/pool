@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useTournament } from '../store/TournamentContext';
-import { generateDraw } from '../lib/tournament-utils';
-import { Users, LayoutList, Settings2, PlayCircle, Trophy } from 'lucide-react';
+import { generateDraw, unadvanceWinner } from '../lib/tournament-utils';
+import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw } from 'lucide-react';
 import TableManagement from '../components/TableManagement';
 import TableSelector from '../components/TableSelector';
 
 export default function AdminPage() {
   const { state, setTournamentState, updateMatch, setLiveMatch } = useTournament();
   const [newPlayerName, setNewPlayerName] = useState('');
-  const [assigningMatch, setAssigningMatch] = useState(null); // match being assigned a table
+  const [assigningMatch, setAssigningMatch] = useState(null);
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   const handleAddPlayer = (e) => {
     e.preventDefault();
@@ -22,10 +24,55 @@ export default function AdminPage() {
     setTournamentState({ ...state, players: state.players.filter(p => p.id !== id) });
   };
 
+  const startEditing = (player) => {
+    setEditingPlayerId(player.id);
+    setEditingName(player.name);
+  };
+
+  const handleRenamePlayer = (id) => {
+    const trimmed = editingName.trim();
+    if (!trimmed) { setEditingPlayerId(null); return; }
+    setTournamentState({
+      ...state,
+      players: state.players.map(p => p.id === id ? { ...p, name: trimmed } : p)
+    });
+    setEditingPlayerId(null);
+  };
+
+  const handleRenameKeyDown = (e, id) => {
+    if (e.key === 'Enter') handleRenamePlayer(id);
+    if (e.key === 'Escape') setEditingPlayerId(null);
+  };
+
   const handleDraw = () => {
     if (state.players.length < 2) { alert("Need at least 2 players!"); return; }
     const matches = generateDraw(state.players, state.format, state.framesToWin);
     setTournamentState({ ...state, matches, currentLiveMatchId: matches.length > 0 ? matches[0].id : null });
+  };
+
+  const handleResetMatch = (match) => {
+    if (confirm("Reset this match completely? This will undo any winner advancement.")) {
+      let updatedMatchList = state.matches;
+      if (match.status === 'finished') {
+        updatedMatchList = unadvanceWinner(updatedMatchList, match.id);
+      }
+      
+      const updatedMatch = {
+        ...match,
+        score1: 0,
+        score2: 0,
+        frames: [],
+        status: 'live',
+        winnerId: null
+      };
+      
+      updatedMatchList = updatedMatchList.map(m => m.id === match.id ? updatedMatch : m);
+      
+      setTournamentState({
+        ...state,
+        matches: updatedMatchList
+      });
+    }
   };
 
   const resetTournament = () => {
@@ -142,39 +189,64 @@ export default function AdminPage() {
               )}
             </div>
 
-            {state.matches.length === 0 ? (
-              <>
-                <form onSubmit={handleAddPlayer} className="flex gap-2">
-                  <input
-                    type="text"
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                    placeholder="Enter player name..."
-                    value={newPlayerName}
-                    onChange={e => setNewPlayerName(e.target.value)}
-                  />
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 px-6 rounded-lg font-semibold transition">Add</button>
-                </form>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto pr-2">
-                  {state.players.map(p => (
-                    <div key={p.id} className="flex justify-between items-center bg-slate-800 px-3 py-2 rounded-lg">
-                      <span className="font-medium truncate">{p.name}</span>
-                      <button onClick={() => handleRemovePlayer(p.id)} className="text-red-400 hover:text-red-300">&times;</button>
-                    </div>
-                  ))}
+            {state.matches.length > 0 && (
+              <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-emerald-500/20 text-emerald-400 p-2 rounded-full">
+                    <Trophy size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-emerald-400">Draw Completed</h3>
+                    <p className="text-sm text-slate-400">Tournament is underway. You can rename players below.</p>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 mb-4">
-                  <Trophy size={32} />
-                </div>
-                <h3 className="text-2xl font-bold">Draw Completed</h3>
-                <p className="text-slate-400 mt-2">The tournament is underway. Use the remote to control matches.</p>
-                <button onClick={resetTournament} className="mt-6 text-red-400 hover:text-red-300 underline underline-offset-4 text-sm">
+                <button onClick={resetTournament} className="text-red-400 hover:text-red-300 text-sm font-semibold underline decoration-red-400/30">
                   Reset Tournament
                 </button>
               </div>
             )}
+
+            <form onSubmit={handleAddPlayer} className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                placeholder="Enter player name..."
+                value={newPlayerName}
+                onChange={e => setNewPlayerName(e.target.value)}
+                disabled={state.matches.length > 0}
+              />
+              <button type="submit" disabled={state.matches.length > 0} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 rounded-lg font-semibold transition">Add</button>
+            </form>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto pr-2">
+              {state.players.map(p => (
+                <div key={p.id} className="flex justify-between items-center bg-slate-800 px-3 py-2 rounded-lg">
+                  {editingPlayerId === p.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      className="w-full bg-slate-900 border border-emerald-500 rounded px-2 py-1 text-sm outline-none"
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      onBlur={() => handleRenamePlayer(p.id)}
+                      onKeyDown={e => handleRenameKeyDown(e, p.id)}
+                    />
+                  ) : (
+                    <>
+                      <span 
+                        className="font-medium truncate cursor-pointer hover:text-emerald-400 transition"
+                        onClick={() => startEditing(p)}
+                        title="Click to rename"
+                      >
+                        {p.name}
+                      </span>
+                      {state.matches.length === 0 && (
+                        <button onClick={() => handleRemovePlayer(p.id)} className="text-red-400 hover:text-red-300 ml-2">&times;</button>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -245,6 +317,15 @@ export default function AdminPage() {
                             >
                               Set Live TV
                             </button>
+                            {m.status === 'finished' && (
+                              <button
+                                onClick={() => handleResetMatch(m)}
+                                className="text-xs bg-red-900/40 hover:bg-red-800/60 text-red-300 px-3 py-1 rounded transition border border-red-800/50 flex items-center gap-1"
+                                title="Redo match if a player passed by error"
+                              >
+                                <RotateCcw size={12} /> Redo
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

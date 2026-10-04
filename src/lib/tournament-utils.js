@@ -124,3 +124,21 @@ export function advanceWinner(matches, matchId, winnerId) {
 
   return newMatches;
 }
+
+export function unadvanceWinner(matches, matchId) {
+  const newMatches = JSON.parse(JSON.stringify(matches));
+  const currentMatch = newMatches.find(m => m.id === matchId);
+  
+  if (!currentMatch || !currentMatch.nextMatchId) return newMatches;
+
+  const nextMatch = newMatches.find(m => m.id === currentMatch.nextMatchId);
+  if (nextMatch) {
+    if (currentMatch.matchIndex % 2 === 0) {
+      nextMatch.player1Id = null;
+    } else {
+      nextMatch.player2Id = null;
+    }
+  }
+
+  return newMatches;
+}
