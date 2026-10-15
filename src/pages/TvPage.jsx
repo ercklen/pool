@@ -20,6 +20,14 @@ export default function TvPage() {
     return t ? t.name.toUpperCase() : null;
   };
 
+  const getRefereeForTable = (tableId) => {
+    if (!tableId) return null;
+    const t = (state.tables || []).find(t => t.id === tableId);
+    if (!t || !t.refereeId) return null;
+    const r = (state.referees || []).find(ref => ref.id === t.refereeId);
+    return r ? r.name.toUpperCase() : null;
+  };
+
   // Primary: currentLiveMatchId (non-finished). Fallback: first live. Fallback2: first non-finished.
   let liveMatch = null;
   if (tableId) {
@@ -104,17 +112,26 @@ export default function TvPage() {
         )}
 
         {/* LIVE MODE — single main match */}
-        {mode === 'live' && liveMatch && (
-          <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-12">
-            <div className="flex flex-wrap justify-between w-full max-w-7xl items-center gap-4 mb-8 md:mb-16">
-              <div className="text-xl md:text-4xl font-bold text-slate-400 bg-slate-900 px-4 md:px-8 py-2 md:py-4 rounded-2xl border border-slate-800">
-                {getTableName(liveMatch.tableId) || 'TABLE ?'}
+        {mode === 'live' && liveMatch && (() => {
+          const refereeName = getRefereeForTable(liveMatch.tableId);
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-12">
+              <div className="flex flex-wrap justify-between w-full max-w-7xl items-center gap-4 mb-8 md:mb-16">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="text-xl md:text-4xl font-bold text-slate-400 bg-slate-900 px-4 md:px-8 py-2 md:py-4 rounded-2xl border border-slate-800">
+                    {getTableName(liveMatch.tableId) || 'TABLE ?'}
+                  </div>
+                  {refereeName && (
+                    <div className="text-sm md:text-2xl font-bold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-3 md:px-6 py-2 md:py-4 rounded-2xl flex items-center gap-2">
+                      <span>🛡️</span> REF: {refereeName}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full animate-ping"></div>
+                  <div className="text-red-500 font-bold text-2xl md:text-4xl tracking-widest">LIVE</div>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full animate-ping"></div>
-                <div className="text-red-500 font-bold text-2xl md:text-4xl tracking-widest">LIVE</div>
-              </div>
-            </div>
 
             <div className="w-full max-w-7xl grid grid-cols-5 gap-4 md:gap-8 items-center bg-slate-900/50 px-6 py-10 md:p-16 rounded-[2rem] md:rounded-[3rem] border border-slate-800 backdrop-blur-sm shadow-2xl">
               {/* PLAYER 1 */}
@@ -148,8 +165,9 @@ export default function TvPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {mode === 'live' && !liveMatch && (
           <div className="flex-1 flex flex-col items-center justify-center">
@@ -170,25 +188,35 @@ export default function TvPage() {
               <div className="grid gap-4 md:gap-6 h-full" style={{
                 gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))'
               }}>
-                {allLiveMatches.map(m => (
-                  <div key={m.id} className="bg-slate-900 border-2 border-red-800/60 rounded-2xl md:rounded-3xl p-4 md:p-8 flex flex-col shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-red-600 text-white font-bold px-3 py-1 rounded-bl-xl text-xs animate-pulse">LIVE</div>
-                    <div className="text-lg md:text-2xl text-purple-300 font-bold mb-2">
-                      {getTableName(m.tableId) || 'TABLE ?'}
+                {allLiveMatches.map(m => {
+                  const refName = getRefereeForTable(m.tableId);
+                  return (
+                    <div key={m.id} className="bg-slate-900 border-2 border-red-800/60 rounded-2xl md:rounded-3xl p-4 md:p-8 flex flex-col shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-red-600 text-white font-bold px-3 py-1 rounded-bl-xl text-xs animate-pulse">LIVE</div>
+                      <div className="flex justify-between items-center gap-2 mb-2 pr-12">
+                        <div className="text-lg md:text-2xl text-purple-300 font-bold truncate">
+                          {getTableName(m.tableId) || 'TABLE ?'}
+                        </div>
+                        {refName && (
+                          <div className="text-xs md:text-sm font-semibold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                            🛡️ {refName}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center text-2xl md:text-4xl font-black mt-2">
+                        <span className="truncate flex-1 text-slate-100">{getPlayerName(m.player1Id)}</span>
+                        <span className="text-emerald-400 font-mono text-3xl md:text-5xl ml-4">{m.score1}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-2xl md:text-4xl font-black mt-4 pt-4 border-t border-slate-800">
+                        <span className="truncate flex-1 text-slate-100">{getPlayerName(m.player2Id)}</span>
+                        <span className="text-blue-400 font-mono text-3xl md:text-5xl ml-4">{m.score2}</span>
+                      </div>
+                      <div className="mt-4 text-sm text-slate-500">
+                        Frame {m.score1 + m.score2 + 1} / Target: {state.framesToWin}
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center text-2xl md:text-4xl font-black mt-2">
-                      <span className="truncate flex-1 text-slate-100">{getPlayerName(m.player1Id)}</span>
-                      <span className="text-emerald-400 font-mono text-3xl md:text-5xl ml-4">{m.score1}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-2xl md:text-4xl font-black mt-4 pt-4 border-t border-slate-800">
-                      <span className="truncate flex-1 text-slate-100">{getPlayerName(m.player2Id)}</span>
-                      <span className="text-blue-400 font-mono text-3xl md:text-5xl ml-4">{m.score2}</span>
-                    </div>
-                    <div className="mt-4 text-sm text-slate-500">
-                      Frame {m.score1 + m.score2 + 1} / Target: {state.framesToWin}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

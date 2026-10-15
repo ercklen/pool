@@ -12,6 +12,7 @@ const initialState = {
   format: "A3",
   framesToWin: 3,
   players: [],
+  referees: [],
   matches: [],
   tables: DEFAULT_TABLES,
   currentLiveMatchId: null,
@@ -34,6 +35,7 @@ function sanitizeFromFirebase(data) {
     ...data,
     framesToWin: data.framesToWin ?? initialState.framesToWin,
     players: toArray(data.players).map(p => ({ ...p })),
+    referees: toArray(data.referees).map(r => ({ ...r })),
     matches: toArray(data.matches).map(m => ({
       ...m,
       frames: toArray(m.frames),
@@ -136,8 +138,15 @@ export function TournamentProvider({ children }) {
     set(ref(db, 'tournament/matches'), newMatches).catch(err => console.error('Firebase assign table error:', err));
   };
 
+  const assignRefereeToTable = (tableId, refereeId) => {
+    const newTables = (state.tables || []).map(t =>
+      t.id === tableId ? { ...t, refereeId: refereeId ?? null } : t
+    );
+    set(ref(db, 'tournament/tables'), newTables).catch(err => console.error('Firebase assign referee error:', err));
+  };
+
   return (
-    <TournamentContext.Provider value={{ state, setTournamentState, updateMatch, setLiveMatch, addTable, removeTable, assignTable }}>
+    <TournamentContext.Provider value={{ state, setTournamentState, updateMatch, setLiveMatch, addTable, removeTable, assignTable, assignRefereeToTable }}>
       {children}
     </TournamentContext.Provider>
   );

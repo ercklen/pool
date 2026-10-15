@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useTournament } from '../store/TournamentContext';
-import { PlusCircle, Trash2, Monitor } from 'lucide-react';
+import { PlusCircle, Trash2, Monitor, ShieldCheck } from 'lucide-react';
 
 export default function TableManagement() {
-  const { state, addTable, removeTable } = useTournament();
+  const { state, addTable, removeTable, assignRefereeToTable } = useTournament();
   const tables = state.tables || [];
+  const referees = state.referees || [];
 
   const getTableStatus = (tableId) => {
     const match = state.matches.find(m => m.tableId === tableId);
@@ -62,7 +63,7 @@ export default function TableManagement() {
           const { status, match } = getTableStatus(table.id);
           const cfg = statusConfig[status];
           return (
-            <div key={table.id} className={`rounded-xl border p-4 flex flex-col gap-2 ${cfg.cls}`}>
+            <div key={table.id} className={`rounded-xl border p-4 flex flex-col gap-2.5 ${cfg.cls}`}>
               <div className="flex justify-between items-start">
                 <span className="font-bold text-lg text-white">{table.name}</span>
                 <button
@@ -74,6 +75,24 @@ export default function TableManagement() {
                 </button>
               </div>
               <span className="text-sm font-bold">{cfg.label}</span>
+
+              {/* Referee selector on table */}
+              <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-700/60 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-amber-300 font-semibold shrink-0">
+                  <ShieldCheck size={14} /> Referee:
+                </div>
+                <select
+                  value={table.refereeId || ''}
+                  onChange={(e) => assignRefereeToTable(table.id, e.target.value || null)}
+                  className="bg-slate-900 border border-slate-700 text-xs text-white rounded px-2 py-1 outline-none focus:border-amber-400 flex-1 min-w-0"
+                >
+                  <option value="">-- No referee --</option>
+                  {referees.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+
               {match && match.status !== 'finished' && (
                 <div className="text-xs text-slate-300 mt-1 truncate">
                   {getPlayerName(match.player1Id)} vs {getPlayerName(match.player2Id)}

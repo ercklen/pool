@@ -174,12 +174,28 @@ export default function RemotePage() {
     }
   };
 
+  const getRefereeName = (refId) => {
+    if (!refId) return null;
+    const r = (state.referees || []).find(ref => ref.id === refId);
+    return r ? r.name : null;
+  };
+
+  const activeTable = tableId
+    ? (state.tables || []).find(t => t.id === tableId)
+    : (currentMatch?.tableId ? (state.tables || []).find(t => t.id === currentMatch.tableId) : null);
+  const currentReferee = activeTable ? getRefereeName(activeTable.refereeId) : null;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans overflow-hidden touch-manipulation">
       <header className="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center">
         <h1 className="text-xl font-bold text-emerald-400">
           {tableId ? `${getTableName(tableId)} Remote` : 'Master Remote'}
         </h1>
+        {currentReferee && (
+          <div className="text-xs bg-amber-950/80 border border-amber-500/40 text-amber-300 font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <span>🛡️</span> {currentReferee}
+          </div>
+        )}
       </header>
 
       <main className="p-4 max-w-md mx-auto flex flex-col h-[calc(100vh-4rem)]">

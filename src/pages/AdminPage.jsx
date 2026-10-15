@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTournament } from '../store/TournamentContext';
 import { generateDraw, unadvanceWinner } from '../lib/tournament-utils';
-import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw } from 'lucide-react';
+import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw, ShieldCheck, Shuffle } from 'lucide-react';
 import TableManagement from '../components/TableManagement';
 import TableSelector from '../components/TableSelector';
 
@@ -11,6 +11,11 @@ export default function AdminPage() {
   const [assigningMatch, setAssigningMatch] = useState(null);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const [editingName, setEditingName] = useState('');
+
+  // Referees state
+  const [newRefereeName, setNewRefereeName] = useState('');
+  const [editingRefereeId, setEditingRefereeId] = useState(null);
+  const [editingRefereeName, setEditingRefereeName] = useState('');
 
   const handleAddPlayer = (e) => {
     e.preventDefault();
@@ -44,10 +49,73 @@ export default function AdminPage() {
     if (e.key === 'Escape') setEditingPlayerId(null);
   };
 
+  // Referees CRUD
+  const handleAddReferee = (e) => {
+    e.preventDefault();
+    if (!newRefereeName.trim()) return;
+    const newRef = { id: `ref-${Date.now()}`, name: newRefereeName.trim() };
+    const currentReferees = state.referees || [];
+    setTournamentState({ ...state, referees: [...currentReferees, newRef] });
+    setNewRefereeName('');
+  };
+
+  const handleRemoveReferee = (id) => {
+    const currentReferees = state.referees || [];
+    const updatedTables = (state.tables || []).map(t => t.refereeId === id ? { ...t, refereeId: null } : t);
+    setTournamentState({
+      ...state,
+      referees: currentReferees.filter(r => r.id !== id),
+      tables: updatedTables,
+    });
+  };
+
+  const startEditingReferee = (referee) => {
+    setEditingRefereeId(referee.id);
+    setEditingRefereeName(referee.name);
+  };
+
+  const handleRenameReferee = (id) => {
+    const trimmed = editingRefereeName.trim();
+    if (!trimmed) { setEditingRefereeId(null); return; }
+    const currentReferees = state.referees || [];
+    setTournamentState({
+      ...state,
+      referees: currentReferees.map(r => r.id === id ? { ...r, name: trimmed } : r)
+    });
+    setEditingRefereeId(null);
+  };
+
+  const handleRenameRefereeKeyDown = (e, id) => {
+    if (e.key === 'Enter') handleRenameReferee(id);
+    if (e.key === 'Escape') setEditingRefereeId(null);
+  };
+
+  // Randomly assign referees to tables
+  const assignRefereesRandomly = (tablesList, refereesList) => {
+    const shuffledRefs = [...(refereesList || [])].sort(() => Math.random() - 0.5);
+    return (tablesList || []).map((table, idx) => ({
+      ...table,
+      refereeId: idx < shuffledRefs.length ? shuffledRefs[idx].id : (table.refereeId || null)
+    }));
+  };
+
+  const handleManualRandomizeReferees = () => {
+    const updatedTables = assignRefereesRandomly(state.tables, state.referees);
+    setTournamentState({ ...state, tables: updatedTables });
+  };
+
   const handleDraw = () => {
     if (state.players.length < 2) { alert("Need at least 2 players!"); return; }
     const matches = generateDraw(state.players, state.format, state.framesToWin);
-    setTournamentState({ ...state, matches, currentLiveMatchId: matches.length > 0 ? matches[0].id : null });
+    // Randomly assign referees to tables when starting tirage
+    const updatedTables = assignRefereesRandomly(state.tables, state.referees);
+
+    setTournamentState({
+      ...state,
+      matches,
+      tables: updatedTables,
+      currentLiveMatchId: matches.length > 0 ? matches[0].id : null
+    });
   };
 
   const handleResetMatch = (match) => {
@@ -77,7 +145,16 @@ export default function AdminPage() {
 
   const resetTournament = () => {
     if (confirm("Are you sure? This will delete all matches and players.")) {
-      setTournamentState({ tournamentName: "", format: "A3", framesToWin: 3, players: [], matches: [], tables: state.tables || [], currentLiveMatchId: null });
+      setTournamentState({
+        tournamentName: "",
+        format: "A3",
+        framesToWin: 3,
+        players: [],
+        referees: state.referees || [],
+        matches: [],
+        tables: (state.tables || []).map(t => ({ ...t, refereeId: null })),
+        currentLiveMatchId: null
+      });
     }
   };
 
@@ -85,6 +162,12 @@ export default function AdminPage() {
     if (!id) return "TBD";
     const p = state.players.find(p => p.id === id);
     return p ? p.name : "Unknown";
+  };
+
+  const getRefereeName = (id) => {
+    if (!id) return null;
+    const r = (state.referees || []).find(ref => ref.id === id);
+    return r ? r.name : null;
   };
 
   const getTableName = (tableId) => {
@@ -248,6 +331,72 @@ export default function AdminPage() {
               ))}
             </div>
           </div>
+
+          {/* REFEREES PANEL */}
+          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 space-y-6 lg:col-span-3">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2 text-xl font-semibold">
+                <ShieldCheck className="text-amber-400" />
+                <h2>Referees / Arbitres ({(state.referees || []).length})</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {(state.referees || []).length > 0 && (state.tables || []).length > 0 && (
+                  <button
+                    onClick={handleManualRandomizeReferees}
+                    className="flex items-center gap-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 px-3 py-1.5 rounded-lg text-sm font-semibold transition"
+                    title="Randomly distribute referees across tables"
+                  >
+                    <Shuffle size={16} /> Randomize on Tables
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Referees are automatically and randomly assigned to tables when you start the Tirage (Draw). You can add, delete, click name to edit/rename, or re-randomize anytime.
+            </p>
+
+            <form onSubmit={handleAddReferee} className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-amber-500 focus:outline-none"
+                placeholder="Enter referee name..."
+                value={newRefereeName}
+                onChange={e => setNewRefereeName(e.target.value)}
+              />
+              <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-6 rounded-lg font-semibold transition">Add Referee</button>
+            </form>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto pr-2">
+              {(state.referees || []).map(r => (
+                <div key={r.id} className="flex justify-between items-center bg-slate-800 px-3 py-2 rounded-lg border border-slate-700/50">
+                  {editingRefereeId === r.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      className="w-full bg-slate-900 border border-amber-500 rounded px-2 py-1 text-sm outline-none"
+                      value={editingRefereeName}
+                      onChange={e => setEditingRefereeName(e.target.value)}
+                      onBlur={() => handleRenameReferee(r.id)}
+                      onKeyDown={e => handleRenameRefereeKeyDown(e, r.id)}
+                    />
+                  ) : (
+                    <>
+                      <span 
+                        className="font-medium truncate cursor-pointer hover:text-amber-400 transition flex items-center gap-1.5"
+                        onClick={() => startEditingReferee(r)}
+                        title="Click to rename referee"
+                      >
+                        <ShieldCheck size={14} className="text-amber-400 shrink-0" />
+                        {r.name}
+                      </span>
+                      <button onClick={() => handleRemoveReferee(r.id)} className="text-red-400 hover:text-red-300 ml-2">&times;</button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* TABLE MANAGEMENT */}
@@ -266,6 +415,7 @@ export default function AdminPage() {
                     <th className="py-3 px-3">Player 1</th>
                     <th className="py-3 px-3">Player 2</th>
                     <th className="py-3 px-3">Table</th>
+                    <th className="py-3 px-3">Referee</th>
                     <th className="py-3 px-3 text-center">Score</th>
                     <th className="py-3 px-3">Status</th>
                     <th className="py-3 px-3 text-right">Actions</th>
@@ -274,6 +424,8 @@ export default function AdminPage() {
                 <tbody>
                   {state.matches.map(m => {
                     const tableName = getTableName(m.tableId);
+                    const tableObj = (state.tables || []).find(t => t.id === m.tableId);
+                    const refName = tableObj ? getRefereeName(tableObj.refereeId) : null;
                     return (
                       <tr key={m.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
                         <td className="py-2 px-3 font-mono text-xs text-slate-500">{m.id}</td>
@@ -289,6 +441,15 @@ export default function AdminPage() {
                             <span className="px-2 py-1 bg-purple-900/40 text-purple-300 border border-purple-800/50 rounded text-xs font-bold">{tableName}</span>
                           ) : (
                             <span className="text-slate-600 text-xs italic">Not Assigned</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3">
+                          {refName ? (
+                            <span className="px-2 py-1 bg-amber-900/30 text-amber-300 border border-amber-800/40 rounded text-xs font-medium flex items-center gap-1 w-fit">
+                              <ShieldCheck size={12} /> {refName}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600 text-xs">-</span>
                           )}
                         </td>
                         <td className="py-2 px-3 text-center font-bold font-mono">
