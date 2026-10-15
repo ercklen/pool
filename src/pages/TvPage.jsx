@@ -53,8 +53,16 @@ export default function TvPage() {
 
   if (!state.matches.length) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center text-slate-500 text-3xl font-bold animate-pulse">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl md:text-6xl font-black text-white mb-4 tracking-tight">
+          {state.tournamentName || 'BILLIARD TOURNAMENT'}
+        </h1>
+        {state.tournamentTime && (
+          <div className="text-xl md:text-3xl text-emerald-400 font-bold mb-6 bg-slate-900 border border-emerald-500/30 px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2">
+            <span>⏰</span> DÉBUT : {state.tournamentTime}
+          </div>
+        )}
+        <div className="text-slate-500 text-2xl md:text-3xl font-bold animate-pulse">
           EN ATTENTE DU TIRAGE AU SORT...
         </div>
       </div>
@@ -69,7 +77,14 @@ export default function TvPage() {
       {/* HEADER */}
       <header className="bg-slate-900 border-b-4 border-emerald-500 px-6 md:px-12 py-4 md:py-6 flex justify-between items-center shadow-2xl flex-shrink-0">
         <div className="flex flex-col">
-          <h1 className="text-2xl md:text-5xl font-black tracking-tight">{state.tournamentName || 'BILLIARD TOURNAMENT'}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl md:text-5xl font-black tracking-tight">{state.tournamentName || 'BILLIARD TOURNAMENT'}</h1>
+            {state.tournamentTime && (
+              <span className="text-xs md:text-base font-bold bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-inner">
+                <span>⏰</span> {state.tournamentTime}
+              </span>
+            )}
+          </div>
           <h2 className="text-base md:text-2xl text-emerald-400 font-bold tracking-widest uppercase mt-1">DÉFI {state.format}</h2>
         </div>
         <div className="flex gap-2 md:gap-4 items-center">

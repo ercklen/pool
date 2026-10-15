@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTournament } from '../store/TournamentContext';
 import { generateDraw, unadvanceWinner } from '../lib/tournament-utils';
-import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw, ShieldCheck, Shuffle } from 'lucide-react';
+import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw, ShieldCheck, Shuffle, Clock } from 'lucide-react';
 import TableManagement from '../components/TableManagement';
 import TableSelector from '../components/TableSelector';
 
@@ -194,6 +194,7 @@ export default function AdminPage() {
     if (confirm("Are you sure? This will delete all matches and players.")) {
       setTournamentState({
         tournamentName: "",
+        tournamentTime: state.tournamentTime || "",
         format: "A3",
         framesToWin: 3,
         players: [],
@@ -270,6 +271,20 @@ export default function AdminPage() {
                   placeholder="e.g. Master Cup 2026"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Clock size={14} className="text-emerald-400" /> Start Time / Heure
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-emerald-500 focus:outline-none text-emerald-300 font-medium"
+                  value={state.tournamentTime || ''}
+                  onChange={e => setTournamentState({ ...state, tournamentTime: e.target.value })}
+                  placeholder="e.g. 16:30 or 4:30 PM"
+                />
+              </div>
+
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-sm text-slate-400 mb-1">Format</label>

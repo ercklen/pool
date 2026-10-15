@@ -9,6 +9,7 @@ const DEFAULT_TABLES = [
 
 const initialState = {
   tournamentName: "",
+  tournamentTime: "",
   format: "A3",
   framesToWin: 3,
   players: [],
@@ -33,6 +34,7 @@ function sanitizeFromFirebase(data) {
   return {
     ...initialState,
     ...data,
+    tournamentTime: data.tournamentTime ?? "",
     framesToWin: data.framesToWin ?? initialState.framesToWin,
     players: toArray(data.players).map(p => ({ ...p })),
     referees: toArray(data.referees).map(r => ({ ...r })),
