@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { useTournament } from '../store/TournamentContext';
 import { generateDraw, unadvanceWinner } from '../lib/tournament-utils';
-import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw, ShieldCheck, Shuffle, Clock } from 'lucide-react';
+import { Users, LayoutList, Settings2, PlayCircle, Trophy, RotateCcw, ShieldCheck, Shuffle, Clock, Share2, Lock, Check } from 'lucide-react';
 import TableManagement from '../components/TableManagement';
 import TableSelector from '../components/TableSelector';
+import PasswordModal from '../components/PasswordModal';
 
 export default function AdminPage() {
   const { state, setTournamentState, updateMatch, setLiveMatch } = useTournament();
+  
+  // Password protection (PIN 102030)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('admin_authenticated') === 'true';
+  });
+
+  const [copiedLink, setCopiedLink] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [assigningMatch, setAssigningMatch] = useState(null);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
@@ -224,6 +232,31 @@ export default function AdminPage() {
     return t ? t.name : null;
   };
 
+  const handleUnlock = () => {
+    setIsAuthenticated(true);
+    sessionStorage.setItem('admin_authenticated', 'true');
+  };
+
+  const handleCopyPublicLink = () => {
+    const url = `${window.location.origin}/schedule`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }).catch(() => {
+      prompt("Copy player schedule link:", url);
+    });
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PasswordModal
+        title="Admin Control Access"
+        expectedPin="102030"
+        onSuccess={handleUnlock}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       {/* Table assignment modal */}
@@ -238,12 +271,32 @@ export default function AdminPage() {
         {/* HEADER */}
         <header className="flex flex-wrap justify-between items-center gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-              Billiard Tournament Admin
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                Billiard Tournament Admin
+              </h1>
+              <span className="text-xs bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-bold">
+                PIN LOCKED
+              </span>
+            </div>
             <p className="text-slate-400 mt-1">Configure and manage your tournament</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3 flex-wrap">
+            <button
+              onClick={handleCopyPublicLink}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition border ${
+                copiedLink
+                  ? 'bg-emerald-600 text-white border-emerald-500'
+                  : 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-emerald-500/30'
+              }`}
+              title="Share match schedule & who plays with whom"
+            >
+              {copiedLink ? <Check size={18} /> : <Share2 size={18} />}
+              {copiedLink ? 'Link Copied!' : 'Share Players Link'}
+            </button>
+            <a href="/schedule" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-semibold transition border border-slate-700">
+              <Users size={18} /> Players View
+            </a>
             <a href="/tv" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition">
               <PlayCircle size={20} /> TV Screen
             </a>

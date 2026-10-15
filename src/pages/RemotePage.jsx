@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament } from '../store/TournamentContext';
 import { advanceWinner, unadvanceWinner } from '../lib/tournament-utils';
-import { Tv, Undo2, RotateCcw, Save } from 'lucide-react';
+import { Tv, Undo2, RotateCcw, Save, Lock } from 'lucide-react';
+import PasswordModal from '../components/PasswordModal';
 
 export default function RemotePage() {
   const { tableId } = useParams();
+  const navigate = useNavigate();
   const { state, setTournamentState, updateMatch, setLiveMatch } = useTournament();
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('remote_authenticated') === 'true';
+  });
+
   const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   const activeMatches = state.matches.filter(m => m.status !== 'finished');
@@ -185,12 +192,33 @@ export default function RemotePage() {
     : (currentMatch?.tableId ? (state.tables || []).find(t => t.id === currentMatch.tableId) : null);
   const currentReferee = activeTable ? getRefereeName(activeTable.refereeId) : null;
 
+  const handleUnlock = () => {
+    setIsAuthenticated(true);
+    sessionStorage.setItem('remote_authenticated', 'true');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PasswordModal
+        title={tableId ? `${getTableName(tableId)} Remote Access` : "Scorekeeper Remote Access"}
+        expectedPin="102030"
+        onSuccess={handleUnlock}
+        onCancel={() => navigate('/schedule')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans overflow-hidden touch-manipulation">
       <header className="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-emerald-400">
-          {tableId ? `${getTableName(tableId)} Remote` : 'Master Remote'}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-emerald-400">
+            {tableId ? `${getTableName(tableId)} Remote` : 'Master Remote'}
+          </h1>
+          <span className="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">
+            LOCKED
+          </span>
+        </div>
         {currentReferee && (
           <div className="text-xs bg-amber-950/80 border border-amber-500/40 text-amber-300 font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
             <span>🛡️</span> {currentReferee}

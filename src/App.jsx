@@ -5,13 +5,15 @@ import { TournamentProvider } from './store/TournamentContext';
 import AdminPage from './pages/AdminPage';
 import TvPage from './pages/TvPage';
 import RemotePage from './pages/RemotePage';
+import PlayersSchedulePage from './pages/PlayersSchedulePage';
 
 function App() {
   return (
     <TournamentProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/admin" replace />} />
+          <Route path="/" element={<Navigate to="/schedule" replace />} />
+          <Route path="/schedule" element={<PlayersSchedulePage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/tv" element={<TvPage />} />
           <Route path="/tv/:tableId" element={<TvPage />} />
