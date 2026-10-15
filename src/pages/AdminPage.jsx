@@ -104,17 +104,64 @@ export default function AdminPage() {
     setTournamentState({ ...state, tables: updatedTables });
   };
 
+  // Randomly assign available tables to matches
+  const handleRandomizeTables = () => {
+    const tables = state.tables || [];
+    if (tables.length === 0) {
+      alert("No tables available to assign!");
+      return;
+    }
+
+    // Shuffle tables
+    const shuffledTables = [...tables].sort(() => Math.random() - 0.5);
+
+    // Eligible matches to assign:
+    // First priority: unfinished matches that are ready (have both players and not finished)
+    // Keep already finished matches intact
+    const pendingMatches = state.matches.filter(m => m.status !== 'finished' && m.player1Id && m.player2Id);
+    
+    // Distribute shuffled tables to pending matches up to table count
+    let tableIdx = 0;
+    const newMatches = state.matches.map(m => {
+      // Don't change finished matches
+      if (m.status === 'finished') return m;
+
+      // If it's one of the ready pending matches
+      const isPending = pendingMatches.some(pm => pm.id === m.id);
+      if (isPending && tableIdx < shuffledTables.length) {
+        const assignedTable = shuffledTables[tableIdx];
+        tableIdx++;
+        return { ...m, tableId: assignedTable.id };
+      }
+      return m;
+    });
+
+    setTournamentState({ ...state, matches: newMatches });
+  };
+
   const handleDraw = () => {
     if (state.players.length < 2) { alert("Need at least 2 players!"); return; }
     const matches = generateDraw(state.players, state.format, state.framesToWin);
     // Randomly assign referees to tables when starting tirage
     const updatedTables = assignRefereesRandomly(state.tables, state.referees);
 
+    // Randomly assign tables to first-round playable matches
+    const shuffledTables = [...(updatedTables || [])].sort(() => Math.random() - 0.5);
+    let tableIdx = 0;
+    const matchesWithTables = matches.map(m => {
+      if (m.round === 1 && m.status !== 'finished' && m.player1Id && m.player2Id && tableIdx < shuffledTables.length) {
+        const assignedTable = shuffledTables[tableIdx];
+        tableIdx++;
+        return { ...m, tableId: assignedTable.id };
+      }
+      return m;
+    });
+
     setTournamentState({
       ...state,
-      matches,
+      matches: matchesWithTables,
       tables: updatedTables,
-      currentLiveMatchId: matches.length > 0 ? matches[0].id : null
+      currentLiveMatchId: matchesWithTables.length > 0 ? matchesWithTables[0].id : null
     });
   };
 
@@ -405,7 +452,16 @@ export default function AdminPage() {
         {/* MATCHES TABLE */}
         {state.matches.length > 0 && (
           <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 space-y-4">
-            <h2 className="text-xl font-semibold border-b border-slate-800 pb-2">Matches Overview</h2>
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h2 className="text-xl font-semibold">Matches Overview</h2>
+              <button
+                onClick={handleRandomizeTables}
+                className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition"
+                title="Randomly affect available tables to active matches"
+              >
+                <Shuffle size={16} /> Randomly Affect Tables to Matches
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
