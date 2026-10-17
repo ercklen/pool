@@ -185,10 +185,32 @@ export default function TvPage() {
         })()}
 
         {mode === 'live' && !liveMatch && (
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="text-4xl text-slate-600 font-bold">
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+            <div className="text-4xl text-slate-600 font-bold text-center">
               {tableId ? 'NO MATCH ASSIGNED TO THIS TABLE' : 'NO MATCH SELECTED'}
             </div>
+            {tableId && (
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-xl w-full text-sm">
+                <div className="text-slate-400 mb-3 font-semibold">🔍 Debug Info</div>
+                <div className="mb-2">
+                  <span className="text-slate-500">URL Table ID: </span>
+                  <span className="font-mono text-yellow-400 bg-slate-800 px-2 py-0.5 rounded">{tableId}</span>
+                </div>
+                <div className="text-slate-500 mb-2">Available tables in Firebase:</div>
+                <div className="space-y-1">
+                  {(state.tables || []).map(t => (
+                    <div key={t.id} className="flex justify-between items-center bg-slate-800 rounded-lg px-3 py-2">
+                      <span className="text-white font-semibold">{t.name}</span>
+                      <span className="font-mono text-xs text-emerald-400 bg-slate-900 px-2 py-0.5 rounded">{t.id}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 text-slate-500 text-xs">
+                  ⚠️ Make sure the URL uses the exact table ID shown above.
+                  <br/>Example: <span className="text-emerald-400">/tv/{(state.tables || [])[0]?.id || 'table-id-here'}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

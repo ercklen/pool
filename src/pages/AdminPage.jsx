@@ -298,8 +298,14 @@ export default function AdminPage() {
               <Users size={18} /> Players View
             </a>
             <a href="/tv" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition">
-              <PlayCircle size={20} /> TV Screen
+              <PlayCircle size={20} /> TV (All)
             </a>
+            {(state.tables || []).map(t => (
+              <a key={t.id} href={`/tv/${t.id}`} target="_blank"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-900/60 hover:bg-blue-800/80 border border-blue-500/40 text-blue-300 rounded-lg font-semibold transition text-sm">
+                <PlayCircle size={16} /> TV · {t.name}
+              </a>
+            ))}
             <a href="/remote" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-semibold transition">
               <LayoutList size={20} /> Remote Control
             </a>
