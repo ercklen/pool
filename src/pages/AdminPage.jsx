@@ -344,8 +344,8 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex gap-4">
-                <div className="flex-1">
+              <div className="flex gap-4 flex-wrap">
+                <div className="flex-1 min-w-[120px]">
                   <label className="block text-sm text-slate-400 mb-1">Format</label>
                   <select
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-emerald-500 focus:outline-none"
@@ -361,15 +361,28 @@ export default function AdminPage() {
                     <option value="A3">A3</option>
                     <option value="A4">A4</option>
                     <option value="A5">A5</option>
+                    <option value="A6">A6</option>
+                    <option value="A7">A7</option>
+                    <option value="A8">A8</option>
                   </select>
                 </div>
-                <div className="w-1/3">
+                <div className="w-1/4 min-w-[80px]">
                   <label className="block text-sm text-slate-400 mb-1">Target</label>
                   <input
                     type="number"
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-emerald-500 focus:outline-none"
                     value={state.framesToWin}
                     onChange={e => setTournamentState({ ...state, framesToWin: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div className="w-1/4 min-w-[80px]">
+                  <label className="block text-sm text-slate-400 mb-1">Final Target</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 focus:border-yellow-500 focus:outline-none border-yellow-700"
+                    value={state.finalFramesToWin ?? 8}
+                    onChange={e => setTournamentState({ ...state, finalFramesToWin: parseInt(e.target.value) || 1 })}
                   />
                 </div>
               </div>

@@ -83,10 +83,16 @@ export default function RemotePage() {
       frames: newFrames
     };
 
+    // Use finalFramesToWin for the final (match with no nextMatchId), regular framesToWin otherwise
+    const isFinalMatch = !currentMatch.nextMatchId;
+    const targetFrames = isFinalMatch
+      ? (state.finalFramesToWin ?? state.framesToWin)
+      : state.framesToWin;
+
     // Check win condition
-    if (newScore1 >= state.framesToWin || newScore2 >= state.framesToWin) {
+    if (newScore1 >= targetFrames || newScore2 >= targetFrames) {
       updatedMatch.status = 'finished';
-      updatedMatch.winnerId = newScore1 >= state.framesToWin ? currentMatch.player1Id : currentMatch.player2Id;
+      updatedMatch.winnerId = newScore1 >= targetFrames ? currentMatch.player1Id : currentMatch.player2Id;
 
       // Advance winner in bracket
       const updatedMatchList = state.matches.map(m => m.id === updatedMatch.id ? updatedMatch : m);

@@ -12,6 +12,7 @@ const initialState = {
   tournamentTime: "",
   format: "A3",
   framesToWin: 3,
+  finalFramesToWin: 8,
   players: [],
   referees: [],
   matches: [],
@@ -36,6 +37,7 @@ function sanitizeFromFirebase(data) {
     ...data,
     tournamentTime: data.tournamentTime ?? "",
     framesToWin: data.framesToWin ?? initialState.framesToWin,
+    finalFramesToWin: data.finalFramesToWin ?? initialState.finalFramesToWin,
     players: toArray(data.players).map(p => ({ ...p })),
     referees: toArray(data.referees).map(r => ({ ...r })),
     matches: toArray(data.matches).map(m => ({
